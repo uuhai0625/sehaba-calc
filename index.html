@@ -931,6 +931,12 @@
 
   fillPapers(PRINTER_BY_KEY[elPrinter.value]);
   restoreAuto();
+  // 小説ページ数計算ツール等から ?pages=総ページ数(表紙除く) で渡されたら本文ページ数に入れる
+  try {
+    var qp = new URLSearchParams(location.search).get("pages");
+    var qn = qp === null ? NaN : Number(qp);
+    if (Number.isInteger(qn) && qn >= 2 && qn <= 2000) elPages.value = String(qn % 2 ? qn + 1 : qn);
+  } catch (e) {}
   render({ immediate: true });
 })();
 </script>
