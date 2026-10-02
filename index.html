@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<script>
+  (function() {
+    var GA_ID = 'G-WSX06T4KKJ';
+    var isLocalDev = ['localhost', '127.0.0.1', ''].includes(location.hostname);
+    if (isLocalDev) return;
+    var s = document.createElement('script');
+    s.async = true;
+    s.src = 'https://www.googletagmanager.com/gtag/js?id=' + GA_ID;
+    document.head.appendChild(s);
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){ dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', GA_ID);
+    document.addEventListener('click', function(e) {
+      var a = e.target && e.target.closest ? e.target.closest('a[href*="booth.pm"]') : null;
+      if (!a) return;
+      gtag('event', 'booth_click', { link_url: a.href, link_id: a.id || '', link_text: (a.textContent || '').trim().slice(0, 40) });
+    });
+  })();
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="同人誌の背幅を本文ページ数と用紙から計算。栄光・ねこのしっぽ・緑陽社など印刷所ごとの計算方法に対応し、塗り足し込みの表紙サイズをmmとpx(350/600dpi)で表示する無料ツール。">
+<link rel="canonical" href="https://uuhai0625.github.io/sehaba-calc/">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="ja_JP">
+<meta property="og:title" content="同人誌 背幅計算ツール(印刷所別の計算方法・表紙サイズのpx換算つき)">
+<meta property="og:description" content="同人誌の背幅を本文ページ数と用紙から計算。栄光・ねこのしっぽ・緑陽社など印刷所ごとの計算方法に対応し、塗り足し込みの表紙サイズをmmとpx(350/600dpi)で表示する無料ツール。">
+<meta property="og:url" content="https://uuhai0625.github.io/sehaba-calc/">
+<title>同人誌 背幅計算ツール(印刷所別の計算方法・表紙サイズのpx換算つき)</title>
+<style>
+  :root {
+    --bg: #f5f3ee;
+    --panel: #ffffff;
+    --border: #e1dcd0;
+    --text: #2a2a33;
+    --muted: #625d55;
+    --accent: #2b4c7e;
+    --accent-dark: #1f3a63;
+    --soft: #eef2f8;
+    --warn-bg: #fff4e0;
+    --warn-text: #7a4b00;
+    --err-bg: #fdecec;
+    --err-text: #9b1c1c;
+    --locked: #b3ada0;
+    --bleed: #f6cfcf;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+  }
+  header {
+    background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+    color: #fff;
+    padding: 26px 20px 20px;
+    text-align: center;
+  }
+  header h1 { margin: 0 0 6px; font-size: 1.45rem; }
+  header p { margin: 0; opacity: .94; font-size: .9rem; }
+  header .note { margin-top: 8px; font-size: .8rem; opacity: .92; }
+  main { max-width: 860px; margin: 0 auto; padding: 22px 16px 50px; }
+  section.card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin-bottom: 18px;
+  }
+  section.card h2 { margin: 0 0 6px; font-size: 1.05rem; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .desc { color: var(--muted); font-size: .84rem; margin: 0 0 12px; }
+  .badge { display: inline-block; font-size: .7rem; padding: 2px 8px; border-radius: 999px; background: #fff1cc; color: #7a5600; font-weight: bold; }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+  label.field { display: block; margin-bottom: 12px; }
+  .lbl { font-size: .85rem; font-weight: bold; display: block; }
+  .hint { font-size: .75rem; color: var(--muted); font-weight: normal; display: block; margin-top: 2px; }
+  label.field input:not([type=checkbox]), label.field select {
+    width: 100%; margin-top: 5px; padding: 9px 10px; min-height: 44px;
+    border: 1px solid var(--border); border-radius: 8px;
+    font-size: 1rem; font-family: inherit; background: #fffefb; color: var(--text);
+  }
+  label.check { display: flex; align-items: center; gap: 8px; min-height: 44px; font-size: .88rem; cursor: pointer; }
+  label.check input { width: 20px; height: 20px; margin: 0; }
+  .notice { font-size: .8rem; color: var(--accent-dark); background: var(--soft); border-radius: 6px; padding: 6px 10px; margin: -4px 0 12px; }
+  .row2 { display: flex; gap: 12px; }
+  .row2 > * { flex: 1; min-width: 0; }
+  fieldset.seg { border: none; padding: 0; margin: 0 0 12px; }
+  fieldset.seg legend { font-size: .85rem; font-weight: bold; padding: 0; margin-bottom: 5px; }
+  .seg-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .seg-row label {
+    flex: 1; min-width: 120px; min-height: 44px;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px;
+    font-size: .88rem; cursor: pointer; background: #fffefb;
+  }
+  .seg-row label.on { border-color: var(--accent); background: var(--soft); font-weight: bold; }
+  .seg-row label:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .hidden { display: none !important; }
+
+  .result-main { text-align: center; padding: 8px 0 4px; }
+  .result-main .big { font-size: 2.4rem; font-weight: bold; color: var(--accent-dark); line-height: 1.2; }
+  .result-main .big small { font-size: 1rem; }
+  .result-main .cover { font-size: 1.08rem; font-weight: bold; margin-top: 8px; }
+  .result-main .sub { font-size: .8rem; color: var(--muted); }
+  .warn, .err { border-radius: 8px; padding: 9px 12px; font-size: .83rem; margin: 10px 0 0; }
+  .warn { background: var(--warn-bg); color: var(--warn-text); }
+  .err { background: var(--err-bg); color: var(--err-text); }
+  .warn + .warn, .err + .err { margin-top: 6px; }
+  table.dims { width: 100%; border-collapse: collapse; font-size: .86rem; margin-top: 12px; }
+  table.dims th, table.dims td { padding: 7px 8px; border-bottom: 1px solid var(--border); text-align: right; white-space: nowrap; }
+  table.dims th:first-child, table.dims td:first-child { text-align: left; white-space: normal; }
+  table.dims thead th { color: var(--muted); font-weight: normal; font-size: .76rem; }
+  table.dims tr.total td { font-weight: bold; background: var(--soft); }
+  .table-wrap { overflow-x: auto; }
+  #previewCanvas { max-width: 100%; height: auto; display: block; margin: 14px auto 0; border-radius: 6px; }
+  .legend { font-size: .76rem; color: var(--muted); margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px 14px; }
+  .legend i { display: inline-block; width: 18px; height: 0; border-top: 3px solid; vertical-align: middle; margin-right: 4px; }
+  .fine { font-size: .78rem; color: var(--muted); margin: 10px 0 0; }
+  .fine a { color: var(--accent-dark); }
+
+  .btn-row { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  .btn {
+    min-height: 44px; padding: 9px 16px; border-radius: 8px; font-size: .88rem; cursor: pointer;
+    border: 1px solid var(--border); background: #fff; color: var(--text); font-family: inherit;
+  }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: bold; }
+  .btn:disabled { opacity: .55; cursor: default; }
+  .btn:focus-visible { outline: 2px solid var(--accent-dark); outline-offset: 2px; }
+  .status { font-size: .8rem; color: var(--muted); margin-top: 6px; min-height: 1.2em; }
+
+  .teaser { margin-top: 12px; padding: 12px; border: 1px dashed var(--locked); border-radius: 10px; text-align: center; color: var(--muted); font-size: .84rem; }
+  .locked-panel { border: 1px dashed var(--locked); border-radius: 10px; padding: 16px; text-align: center; color: var(--muted); background: #fbfaf6; }
+  .locked-panel .feat-list { text-align: left; max-width: 500px; margin: 10px auto; font-size: .85rem; padding-left: 1.2em; }
+  .buy-btn { display: inline-block; margin-top: 8px; background: var(--accent-dark); color: #fff; font-weight: bold; padding: 11px 22px; border-radius: 999px; text-decoration: none; font-size: .9rem; }
+  .buy-btn:hover { background: #142a49; }
+
+  table.compare { width: 100%; border-collapse: collapse; font-size: .84rem; margin-top: 8px; }
+  table.compare caption { text-align: left; font-size: .8rem; color: var(--muted); padding-bottom: 4px; }
+  table.compare th, table.compare td { padding: 7px 8px; border-bottom: 1px solid var(--border); text-align: left; }
+  table.compare th { color: var(--muted); font-weight: normal; font-size: .76rem; }
+  table.compare td.num { text-align: right; white-space: nowrap; }
+  table.compare td .paper { display: block; font-size: .74rem; color: var(--muted); }
+  table.compare tr.current td { background: var(--soft); font-weight: bold; }
+  .saved-item { border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: .84rem; word-break: break-all; }
+  .saved-item .meta { color: var(--muted); font-size: .76rem; }
+  .saved-item .ops { display: flex; gap: 6px; flex-shrink: 0; }
+  form.save-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  form.save-row input { flex: 1; min-width: 180px; min-height: 44px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 1rem; font-family: inherit; }
+
+  footer { max-width: 860px; margin: 0 auto; padding: 0 16px 40px; font-size: .78rem; color: var(--muted); }
+  footer a { color: var(--muted); }
+
+  @media (max-width: 560px) {
+    .row2 { flex-direction: column; gap: 0; }
+    .result-main .big { font-size: 2rem; }
+    section.card { padding: 16px 14px; }
+  }
+  @media print {
+    .btn-row, #pro-section, .teaser, .status, .no-print { display: none !important; }
+    body { background: #fff; }
+    section.card { break-inside: avoid; border: 1px solid #ccc; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>同人誌 背幅計算ツール</h1>
+  <p>本文ページ数と本文用紙から背幅を計算。表紙データの全体サイズ(mm・px)まで一度に出せます</p>
+  <p class="note">結果は目安です。入稿前に、入稿先の印刷所の公式ページで最終確認してください。</p>
+</header>
+
+<main>
+
+  <section class="card">
+    <h2>① 印刷所と本の仕様</h2>
+    <label class="field">
+      <span class="lbl">入稿する印刷所</span>
+      <span class="hint">印刷所によって、表紙の厚みを足すか・端数の丸め方が違います。一覧にない場合は「その他」を選んで紙厚を入力してください</span>
+      <select id="in-printer"></select>
+    </label>
+
+    <fieldset class="seg">
+      <legend>綴じ方</legend>
+      <div class="seg-row">
+        <label><input type="radio" name="binding" value="perfect" checked> 無線綴じ</label>
+        <label><input type="radio" name="binding" value="saddle"> 中綴じ(背なし)</label>
+      </div>
+    </fieldset>
+
+    <fieldset class="seg">
+      <legend>綴じ方向</legend>
+      <div class="seg-row">
+        <label><input type="radio" name="direction" value="right" checked> 右綴じ(縦書き・漫画)</label>
+        <label><input type="radio" name="direction" value="left"> 左綴じ(横書き)</label>
+      </div>
+    </fieldset>
+
+    <div class="row2">
+      <label class="field">
+        <span class="lbl">仕上がりサイズ</span>
+        <select id="in-size"></select>
+      </label>
+      <label class="field">
+        <span class="lbl">本文ページ数(表紙を除く)</span>
+        <span class="hint">表紙の表・裏、裏表紙の表・裏(表1〜表4)の4ページは含めません。口絵・遊び紙がある場合は入稿先の数え方に従って足してください</span>
+        <input type="number" id="in-pages" value="32" min="2" max="2000" step="2" inputmode="numeric" aria-describedby="pagesErr">
+      </label>
+    </div>
+    <p class="err hidden" id="pagesErr" style="margin:-4px 0 12px;"></p>
+    <div class="row2 hidden" id="custom-size-row">
+      <label class="field">
+        <span class="lbl">仕上がりの幅(mm)</span>
+        <input type="number" id="in-w" value="148" min="20" max="600" step="0.1" inputmode="decimal">
+      </label>
+      <label class="field">
+        <span class="lbl">仕上がりの高さ(mm)</span>
+        <input type="number" id="in-h" value="210" min="20" max="600" step="0.1" inputmode="decimal">
+      </label>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>② 用紙</h2>
+    <label class="field" id="paper-field">
+      <span class="lbl">本文用紙</span>
+      <select id="in-paper"></select>
+    </label>
+    <p class="notice hidden" id="paperNotice" role="status"></p>
+    <label class="field hidden" id="thick-field">
+      <span class="lbl">本文用紙1枚の厚さ(mm)</span>
+      <span class="hint">印刷所の用紙一覧に載っている紙厚です。例: 上質70kg ≒ 0.09〜0.10mm、上質90kg ≒ 0.12mm</span>
+      <input type="number" id="in-thick" value="0.1" min="0.03" max="1" step="0.001" inputmode="decimal">
+    </label>
+    <label class="field hidden" id="cover-field">
+      <span class="lbl">表紙用紙1枚の厚さ(mm)</span>
+      <span class="hint" id="cover-hint"></span>
+      <input type="number" id="in-cover" value="0.25" min="0" max="2" step="0.01" inputmode="decimal">
+    </label>
+  </section>
+
+  <section class="card">
+    <h2>③ 表紙データの設定</h2>
+    <div class="row2">
+      <label class="field">
+        <span class="lbl">塗り足し(各辺)</span>
+        <select id="in-bleed">
+          <option value="3" selected>3mm(標準)</option>
+          <option value="5">5mm</option>
+        </select>
+      </label>
+      <label class="field">
+        <span class="lbl">解像度</span>
+        <span class="hint">カラーは350dpi、グレー・モノクロは600dpiが一般的です</span>
+        <select id="in-dpi">
+          <option value="350" selected>350dpi(カラー)</option>
+          <option value="600">600dpi(グレー・モノクロ)</option>
+          <option value="1200">1200dpi(モノクロ2階調)</option>
+        </select>
+      </label>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>④ 結果</h2>
+    <p class="sr-only" id="liveSummary" aria-live="polite"></p>
+    <div id="result"></div>
+    <div id="previewWrap">
+      <canvas id="previewCanvas" width="800" height="300" role="img" aria-label="表紙の割り付け図"></canvas>
+      <div class="legend">
+        <span><i style="border-color:#2a6fdb"></i>仕上がり線</span>
+        <span><i style="border-color:#1d9a5b"></i>背の線</span>
+        <span><i style="border-color:#c2408a;border-top-style:dashed"></i>安全域(仕上がりから5mm内側)</span>
+        <span><i style="border-color:#f6cfcf;border-top-width:8px"></i>塗り足し</span>
+      </div>
+    </div>
+    <div id="teaser" class="teaser hidden"></div>
+    <div class="btn-row">
+      <button class="btn" id="copyBtn" type="button">結果をテキストでコピー</button>
+      <button class="btn" id="resetBtn" type="button">入力をリセット</button>
+    </div>
+    <div class="status" id="copyStatus" role="status"></div>
+    <p class="fine">印刷所ごとの計算方法・用紙の紙厚は、各社の公式ページ(2026年10月確認)を再現したものです。用紙や仕様は変わることがあり、印刷所の誤差(数%〜±0.5mm程度)や製本時の圧縮で実際の背幅はずれることがあります。背表紙のデザインは、多少ずれても困らないものにしておくのが安全です。本ツールは各印刷所とは関係のない個人制作のツールで、計算結果の利用によって生じた損害について責任を負いかねます。</p>
+  </section>
+
+  <section class="card" id="pro-section">
+    <h2>表紙ガイド画像・印刷所の比較・設定の保存 <span class="badge">買い切り版 ¥100</span></h2>
+    <div class="locked-panel">
+      <p>このページの計算機能は無料でそのまま使えます。買い切り版(ダウンロード購入)では、次の機能が増えます:</p>
+      <ul class="feat-list">
+        <li><strong>表紙ガイド画像の書き出し</strong>: 仕上がり線・背の線・安全域・塗り足しを描いた透明PNGを、入稿サイズ・解像度(dpi情報つき)で保存。ペイントソフトで一番上のレイヤーに置いて使えます</li>
+        <li><strong>印刷所の比較</strong>: 同じページ数・同じ種類の用紙で、8社の背幅と表紙サイズを一覧で比較</li>
+        <li><strong>設定の保存</strong>: 本ごとの設定を名前をつけて保存・呼び出し</li>
+      </ul>
+      <p style="font-size:.8rem;">HTMLファイル1つで届きます。パソコンのブラウザで開いて使うのがおすすめです(オフラインで動きます)。</p>
+      <a class="buy-btn" href="https://uuhai0625.booth.pm/items/8930364" id="buyLink" target="_blank" rel="noopener">買い切り版を見る(BOOTH・新しいタブ)</a>
+    </div>
+  </section>
+
+  
+
+</main>
+
+<footer>
+  <p id="privacyNote">本ツールは完全にブラウザ内で動作し、入力内容はどこにも送信されません。入力内容はこのブラウザ内にだけ自動保存されます。</p>
+  <p>同人誌づくりには無料の<a href="https://uuhai0625.github.io/insatsu-bussuu-simulator/" target="_blank" rel="noopener">印刷部数シミュレーター</a>・<a href="https://uuhai0625.github.io/doujin-okuzuke-maker/" target="_blank" rel="noopener">同人誌奥付メーカー</a>・<a href="https://uuhai0625.github.io/nyuko-countdown/" target="_blank" rel="noopener">入稿締切カウントダウン</a>もどうぞ。<a href="https://uuhai0625.booth.pm/" target="_blank" rel="noopener">他のツールも見る(BOOTHショップ)</a></p>
+  <p>不具合・ご要望は BOOTHメッセージ、または X <a href="https://x.com/uuhai0625" target="_blank" rel="noopener">@uuhai0625</a> まで。</p>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var EDITION = "free"; // "full" で買い切り完全版
+
+  function esc(s) {
+    return String(s).replace(/[<>&"']/g, function (c) {
+      return { "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function track(name, params) {
+    if (!window.dataLayer) return;
+    (function () { window.dataLayer.push(arguments); })("event", name, params || {});
+  }
+  function hasKey(obj, k) { return typeof k === "string" && Object.prototype.hasOwnProperty.call(obj, k); }
+  // 浮動小数点の誤差(4.075 → 4.07499…)で丸めがずれないよう、微小値を足してから丸める
+  var EPS = 1e-9;
+  function r2(v) { return Math.round(v * 100 + EPS) / 100; }
+  function fmtNum(v) { return (Math.round(v * 1000 + EPS) / 1000).toFixed(3).replace(/\.?0+$/, ""); }
+  // 紙厚mm→公式ツールの「用紙係数」(紙厚×10)。0.097→0.97 のように誤差なく戻す
+  function coefOf(t) { return Math.round(t * 1000) / 100; }
+  function fmtMm(v) { return fmtNum(v) + "mm"; }
+
+  // ===== 印刷所データ(各社公式ページ、2026年10月確認) =====
+  // papers: [用紙名, 紙厚mm(POPLSは定数), 比較用の種類, 追加mm]
+  var CATS = {
+    j70: "上質70kg", j90: "上質90kg", j110: "上質110kg", k72: "淡クリームキンマリ・クリーム書籍(72kg前後)",
+    c110: "コート110kg", c135: "コート135kg", m110: "マットコート110kg", m135: "マットコート135kg", comic: "コミック紙"
+  };
+
+  var PRINTERS = [
+    {
+      key: "eikou", name: "栄光", cover: true, coverHint: "栄光は表紙の厚み×2を足します(例: スターアートボード19.5kg = 0.25mm)",
+      url: "https://www.eikou.com/making/printglossary/backwidth/",
+      shinsho: [105, 173], saddleMaxTotal: 64,
+      method: "表紙紙厚×2 + 本文ページ数÷2×本文紙厚(公式の計算ツールと同じく0.001mm単位で四捨五入)",
+      papers: [
+        ["上質70kg", 0.091, "j70"], ["上質90kg", 0.117, "j90"], ["栄光コミック", 0.143, "comic"],
+        ["書籍用紙 淡クリーム62kg", 0.089], ["書籍用紙 淡クリーム90kg", 0.118],
+        ["マットコート90kg", 0.100], ["マットコート110kg", 0.130, "m110"], ["マットコート135kg", 0.174, "m135"],
+        ["コート90kg", 0.080], ["コート110kg", 0.102, "c110"], ["コート135kg", 0.127, "c135"],
+        ["色上質90kg(厚口)", 0.110], ["色上質110kg", 0.160], ["貴好紙", 0.132], ["ビオトープGA 120kg", 0.180]
+      ],
+      spine: function (p, t, c) { var raw = c * 2 + p / 2 * t; return { value: Math.round(raw * 1000 + EPS) / 1000, raw: raw }; },
+      notes: ["栄光は背幅3mm未満なら背表紙を作らないことを推奨しています(誤差3〜5%)。"]
+    },
+    {
+      key: "neko", name: "ねこのしっぽ", cover: true, coverHint: "ねこのしっぽは表紙の厚み×2を足します(表紙用紙により0.170〜0.300mm)",
+      url: "https://www.shippo.co.jp/neko/calc_thick.shtml",
+      shinsho: [112, 176],
+      method: "本文ページ数÷2×本文紙厚 + 表紙紙厚×2(0.1mm単位で切り上げ、±7%の誤差を併記)",
+      papers: [
+        ["上質70kg", 0.095, "j70"], ["上質90kg", 0.121, "j90"], ["上質110kg", 0.150, "j110"],
+        ["ねこ上質[ロシアンブルー]", 0.108], ["淡クリームキンマリ72.5kg", 0.097, "k72"],
+        ["コート(ツヤ)90kg", 0.080], ["コート(ツヤ)110kg", 0.098, "c110"], ["コート(ツヤ)135kg", 0.128, "c135"],
+        ["コート(マット)90kg", 0.099], ["コート(マット)110kg", 0.126, "m110"], ["コート(マット)135kg", 0.158, "m135"],
+        ["HSスノーフォース105kg", 0.158], ["ソフトバルキー", 0.153], ["ソフトバルキー[スノーホワイト]", 0.180],
+        ["書籍紙(モンテシオン)", 0.124], ["ラフクリーム(文庫用紙)", 0.107], ["タブロ-FS 65.5kg", 0.140],
+        ["色上質 特厚口", 0.140], ["オリンパスクラフト92kg", 0.120]
+      ],
+      spine: function (p, t, c) {
+        var raw = p / 2 * t + c * 2;
+        // 公式の計算ツールと表示を一致させるため、公式JSと同じく補正なしで切り上げる
+        var v = Math.ceil(raw * 10) / 10;
+        var err = Math.ceil(v * 0.07 * 10) / 10;
+        var out = { value: v, raw: raw, error: "±" + err.toFixed(1) + "mm" };
+        if (p + 4 < 20) out.warn = "ねこのしっぽの背幅計算は総ページ数(表紙込み)20P以上が対象です。";
+        if (v > 45) out.warn = "ねこのしっぽでは、背幅が45mmを超える本は製本できません(公式の記載)。";
+        return out;
+      },
+      notes: ["書籍紙(モンテシオン)・ラフクリーム・タブロ-FSは、製本時の圧縮を見込んで5%ほど薄い値になっています(公式の注記)。口絵がある場合は公式の計算ツールで口絵分も足せます(本ツールは口絵なしで計算)。"]
+    },
+    {
+      key: "graphic", name: "コミグラ(グラフィック)", cover: true, coverHint: "コミグラは表紙の厚み×2を足します。表紙用紙の厚さは公式の紙厚一覧で確認してください",
+      url: "https://www.graphic.jp/comic/dojinshi/column/cover_tips",
+      shinsho: null,
+      method: "表紙紙厚×2 + 本文紙厚×本文ページ数÷2(0.1mm未満を切り捨てたうえで0.5mm単位に切り上げ)",
+      papers: [
+        ["上質70kg", 0.098, "j70"], ["上質90kg", 0.120, "j90"], ["上質110kg", 0.148, "j110"], ["上質135kg", 0.178],
+        ["コート90kg", 0.077], ["コート110kg", 0.100, "c110"], ["コート135kg", 0.132, "c135"],
+        ["マットコート90kg", 0.107], ["マットコート110kg", 0.130, "m110"], ["マットコート135kg", 0.170, "m135"],
+        ["色上質 厚口", 0.112], ["色上質 特厚口", 0.141]
+      ],
+      spine: function (p, t, c) {
+        var raw = c * 2 + p / 2 * t;
+        var x = Math.floor(raw * 10 + EPS) / 10;
+        return { value: Math.ceil(x * 2 - EPS) / 2, raw: raw };
+      },
+      notes: ["コミグラは背幅2〜3mmの本でも背表紙に文字を入れるデザイン例を紹介しています。"]
+    },
+    {
+      key: "tom", name: "トム出版", cover: false,
+      url: "https://www.tomshuppan.co.jp/manual/sehaba.html",
+      shinsho: null,
+      method: "本文ページ数÷2×紙厚 + 0.4mm(表紙の厚み分)",
+      papers: [
+        ["上質70kg", 0.10, "j70"], ["上質90kg", 0.12, "j90"], ["上質110kg", 0.14, "j110"], ["上質135kg", 0.18],
+        ["淡クリームキンマリ", 0.10, "k72"], ["コミック紙・新白ゆり90kg", 0.13, "comic"], ["コミック紙・新白ゆり100.5kg", 0.16],
+        ["アドニスラフ", 0.15], ["オペラクリームウルトラ", 0.15],
+        ["コート90kg", 0.08], ["コート110kg", 0.11, "c110"], ["コート135kg", 0.13, "c135"],
+        ["マットコート(シルバーダイヤ)90kg", 0.10], ["マットコート(シルバーダイヤ)110kg", 0.13, "m110"], ["マットコート(シルバーダイヤ)135kg", 0.18, "m135"]
+      ],
+      spine: function (p, t) { var raw = p / 2 * t + 0.4; return { value: r2(raw), raw: raw }; },
+      notes: []
+    },
+    {
+      key: "ryokuyo", name: "緑陽社", cover: false,
+      url: "https://www.ryokuyou.co.jp/doujin/sehaba",
+      shinsho: [114, 182],
+      method: "0.05×本文ページ数×用紙係数(=紙厚×10) + 固定の補正値0.4mm(公式の計算ツールと同じく0.01mm単位で切り捨て)",
+      papers: [
+        ["コミックルンバ84kg", 0.132, "comic"], ["コミックルンバナチュラル70.5kg", 0.106],
+        ["上質70kg", 0.097, "j70"], ["上質90kg", 0.126, "j90"], ["上質110kg", 0.150, "j110"],
+        ["クリーム書籍用紙72.5kg", 0.097, "k72"], ["ソフトパステル108.5kg", 0.188],
+        ["ハイマッキンレーアート135kg", 0.120], ["ハイマッキンレーマット135kg", 0.130], ["ライトスタッフGA 110kg", 0.150],
+        ["モンテシオン56kg", 0.117], ["モンテシオン83.5kg", 0.177], ["色上質 厚口", 0.106]
+      ],
+      spine: function (p, t) { var raw = 0.05 * p * coefOf(t) + 0.4; return { value: Math.floor(raw * 100 + 0.05) / 100, raw: raw }; },
+      notes: ["緑陽社は計算値を理論値としていて、背は多少ずれても問題のないデザインを推奨しています。"]
+    },
+    {
+      key: "sunrise", name: "サンライズ", cover: false,
+      url: "https://www.sunrisep.co.jp/useful/auto-sehabakeisan/",
+      shinsho: [110, 173],
+      method: "本文ページ数×0.05×用紙係数(=紙厚×10)、一部の用紙は+0.5mm(公式の計算ツールと同じく0.1mm単位)",
+      papers: [
+        ["上質70kg", 0.100, "j70"], ["クリーム書籍72kg", 0.100, "k72"], ["上質90kg", 0.120, "j90"], ["モンテルキア69kg", 0.120],
+        ["上質110kg(+0.5mm)", 0.140, "j110", 0.5], ["モンテシオン69kg(+0.5mm)", 0.140, null, 0.5],
+        ["ルンバナチュラル(+0.5mm)", 0.110, null, 0.5], ["ルンバ(ホワイト・クリーム・ピンク・ブルー)(+0.5mm)", 0.127, null, 0.5],
+        ["コート110kg", 0.110, "c110"], ["コート135kg", 0.130, "c135"],
+        ["マットコート110kg", 0.140, "m110"], ["マットコート135kg", 0.170, "m135"]
+      ],
+      spine: function (p, t, c, extra) { var raw = p * 0.05 * coefOf(t) + (extra || 0); return { value: Number(raw.toFixed(1)), raw: raw }; },
+      notes: ["サンライズは計算値を理論値としていて、背は多少ずれても問題のないデザインを推奨しています。"]
+    },
+    {
+      key: "popls", name: "POPLS", cover: false,
+      url: "https://www2.popls.co.jp/pop/genkou/hyoushi.html",
+      shinsho: [107, 175],
+      method: "表紙込みの総ページ数÷用紙ごとの定数(0.1mm単位で四捨五入)",
+      papers: [
+        ["白上質90k", 16.5, "j90"], ["淡クリーム90k", 16.5], ["白上質70k", 21.5, "j70"],
+        ["コート110k", 20.5, "c110"], ["淡クリーム70k", 20.5], ["白上質110k", 13.5, "j110"], ["コミック紙", 13.5, "comic"]
+      ],
+      divisor: true,
+      spine: function (p, d) { var raw = (p + 4) / d; return { value: Math.round(raw * 10 + EPS) / 10, raw: raw }; },
+      notes: ["POPLSは背幅3mm以内の場合、指定がなければ表紙(表1)側から背を取ります。口絵がある場合は総ページ数に口絵分も入ります(本ツールは口絵なしで計算)。"]
+    },
+    {
+      key: "printon", name: "プリントオン", cover: false,
+      url: "https://www.print-on.jp/doujin/company/order/manual/sehaba/sehaba.htm",
+      shinsho: null,
+      method: "本文ページ数×1ページあたりの厚さ。公式の自動計算と同じく、2.176mm未満は一律2mm、それ以上は整数mmに丸め(小数部が0.3mm以上なら切り上げ)",
+      papers: [
+        ["上質70kg", 0.098, "j70"], ["上質90kg", 0.123, "j90"], ["上質110kg", 0.152, "j110"], ["上質135kg", 0.180],
+        ["淡クリームキンマリ72.5kg", 0.095, "k72"], ["コート110kg", 0.110, "c110"], ["コート135kg", 0.135, "c135"],
+        ["マットコート110kg", 0.140, "m110"], ["マットコート135kg", 0.180, "m135"],
+        ["コミック紙 白・クリーム", 0.140, "comic"], ["コミック紙 ラフ", 0.150], ["タブロ65.5kg", 0.145],
+        ["色上質 厚口", 0.105], ["ペルーラスノーホワイト90kg", 0.120]
+      ],
+      spine: function (p, t) {
+        var raw = p / 2 * t;
+        return { value: raw < 2.176 ? 2 : Math.round(raw + 0.2 + EPS), raw: raw };
+      },
+      notes: ["プリントオンは背幅2〜3mm程度なら背に文字・絵柄を入れないことを推奨しています(誤差±0.5mm程度)。口絵・袋とじがある場合はそのページ数も足して計算します(本ツールは本文のみで計算)。"]
+    },
+    {
+      key: "other", name: "その他の印刷所(紙厚を入力)", cover: true, manual: true,
+      coverHint: "表紙の厚みを足す印刷所の場合だけ入力してください(足さない場合は0)",
+      url: "",
+      shinsho: null,
+      method: "本文ページ数÷2×本文紙厚 + 表紙紙厚×2(0.01mm単位で四捨五入)",
+      papers: [],
+      spine: function (p, t, c) { var raw = p / 2 * t + c * 2; return { value: r2(raw), raw: raw }; },
+      notes: ["印刷所によって、表紙の厚みの足し方・端数の丸め方が違います。入稿先の計算方法を確認してください。"]
+    }
+  ];
+  var PRINTER_BY_KEY = Object.create(null);
+  PRINTERS.forEach(function (p) { PRINTER_BY_KEY[p.key] = p; });
+  function getPrinter(k) { return hasKey(PRINTER_BY_KEY, k) ? PRINTER_BY_KEY[k] : PRINTERS[0]; }
+
+  var SIZES = [
+    { key: "A4", label: "A4(210×297)", w: 210, h: 297 },
+    { key: "B5", label: "B5(182×257)", w: 182, h: 257 },
+    { key: "A5", label: "A5(148×210)", w: 148, h: 210 },
+    { key: "B6", label: "B6(128×182)", w: 128, h: 182 },
+    { key: "bunko", label: "文庫(105×148)", w: 105, h: 148 },
+    { key: "shinsho", label: "新書(印刷所ごとにサイズが違います)", w: 0, h: 0 },
+    { key: "custom", label: "サイズを入力", w: 0, h: 0 }
+  ];
+
+  var $ = function (id) { return document.getElementById(id); };
+  var elPrinter = $("in-printer"), elSize = $("in-size"), elPages = $("in-pages"), elPaper = $("in-paper");
+  var elThick = $("in-thick"), elCover = $("in-cover"), elBleed = $("in-bleed"), elDpi = $("in-dpi");
+  var elW = $("in-w"), elH = $("in-h");
+
+  PRINTERS.forEach(function (p) {
+    var o = document.createElement("option"); o.value = p.key; o.textContent = p.name; elPrinter.appendChild(o);
+  });
+  SIZES.forEach(function (s) {
+    var o = document.createElement("option"); o.value = s.key; o.textContent = s.label; elSize.appendChild(o);
+  });
+  elSize.value = "A5";
+
+  function radioVal(name) { var r = document.querySelector('input[name="' + name + '"]:checked'); return r ? r.value : ""; }
+  function setRadio(name, v) {
+    document.querySelectorAll('input[name="' + name + '"]').forEach(function (r) { r.checked = r.value === v; });
+  }
+  function syncSeg() {
+    document.querySelectorAll(".seg-row input").forEach(function (r) { r.parentNode.classList.toggle("on", r.checked); });
+  }
+  // 空欄はNaN(=入力エラー)として扱う
+  function numOrNaN(el) { var s = String(el.value).trim(); return s === "" ? NaN : Number(s); }
+
+  // 直前に選んでいた用紙(印刷所を切り替えても同じ種類の用紙を引き継ぐ)
+  var curPaper = { name: "", cat: "" };
+
+  function fillPapers(printer, want) {
+    elPaper.innerHTML = "";
+    printer.papers.forEach(function (pp, i) {
+      var o = document.createElement("option");
+      o.value = String(i);
+      o.textContent = printer.divisor ? pp[0] : pp[0] + "(" + pp[1] + "mm)";
+      elPaper.appendChild(o);
+    });
+    if (!printer.papers.length) return "";
+    var idx = -1;
+    if (want && want.name) idx = printer.papers.findIndex(function (pp) { return pp[0] === want.name; });
+    if (idx < 0 && want && want.cat) idx = printer.papers.findIndex(function (pp) { return pp[2] === want.cat; });
+    var changed = idx < 0 && want && want.name;
+    if (idx < 0) idx = 0;
+    elPaper.value = String(idx);
+    rememberPaper();
+    return changed ? printer.papers[idx][0] : "";
+  }
+  function rememberPaper() {
+    var pr = getPrinter(elPrinter.value);
+    var pp = pr.papers[parseInt(elPaper.value, 10)];
+    if (pp) curPaper = { name: pp[0], cat: pp[2] || "" };
+  }
+
+  var lastSizeMode = "";
+  function syncFields() {
+    var pr = getPrinter(elPrinter.value);
+    var saddle = radioVal("binding") === "saddle";
+    $("paper-field").classList.toggle("hidden", !!pr.manual || saddle);
+    $("thick-field").classList.toggle("hidden", !pr.manual || saddle);
+    // 買い切り版は比較表で表紙の厚みを使うので、無線綴じなら常に表示
+    var showCover = !saddle && (pr.cover || EDITION === "full");
+    $("cover-field").classList.toggle("hidden", !showCover);
+    $("cover-hint").textContent = pr.cover ? (pr.coverHint || "") : "この印刷所の計算には使いません(下の印刷所の比較で、表紙の厚みを足す印刷所の計算に使います)";
+    var sz = elSize.value;
+    var mode = sz === "custom" ? "custom" : (sz === "shinsho" && !pr.shinsho ? "shinsho-input" : "fixed");
+    $("custom-size-row").classList.toggle("hidden", mode === "fixed");
+    if (mode === "shinsho-input" && lastSizeMode !== "shinsho-input" && lastSizeMode !== "") { elW.value = ""; elH.value = ""; }
+    lastSizeMode = mode;
+    syncSeg();
+  }
+
+  // ===== 計算 =====
+  function readState() {
+    var pr = getPrinter(elPrinter.value);
+    var paper = pr.manual ? null : (pr.papers[parseInt(elPaper.value, 10)] || pr.papers[0]);
+    return {
+      printer: pr, paper: paper,
+      binding: radioVal("binding"), direction: radioVal("direction"),
+      sizeKey: elSize.value,
+      pagesRaw: numOrNaN(elPages),
+      thick: numOrNaN(elThick), cover: numOrNaN(elCover),
+      bleed: Number(elBleed.value) || 3, dpi: Number(elDpi.value) || 350,
+      customW: numOrNaN(elW), customH: numOrNaN(elH)
+    };
+  }
+
+  function trimSize(st) {
+    if (st.sizeKey === "shinsho" && st.printer.shinsho) return { w: st.printer.shinsho[0], h: st.printer.shinsho[1], note: st.printer.name + "の新書サイズ(" + st.printer.shinsho[0] + "×" + st.printer.shinsho[1] + "mm)で計算しています。" };
+    if (st.sizeKey === "custom" || st.sizeKey === "shinsho") return { w: st.customW, h: st.customH, note: st.sizeKey === "shinsho" ? "新書サイズは印刷所ごとに違うため、入稿先の新書サイズを入力してください。" : "" };
+    var s = SIZES.filter(function (x) { return x.key === st.sizeKey; })[0] || SIZES[2];
+    return { w: s.w, h: s.h };
+  }
+
+  function calcSpine(printer, paper, st) {
+    if (st.binding === "saddle") return { value: 0, raw: 0 };
+    var c = isNaN(st.cover) ? 0 : st.cover;
+    if (printer.manual) return printer.spine(st.pages, st.thick, c);
+    if (printer.divisor) return printer.spine(st.pages, paper[1]);
+    return printer.spine(st.pages, paper[1], printer.cover ? c : 0, paper[3]);
+  }
+
+  function compute(st) {
+    var errors = [], pageErr = "";
+    var p = st.pagesRaw;
+    if (isNaN(p)) pageErr = "本文ページ数を入力してください。";
+    else if (p !== Math.floor(p)) pageErr = "本文ページ数は整数で入力してください。";
+    else if (p < 2) pageErr = "本文ページ数を2以上で入力してください。";
+    else if (p > 2000) pageErr = "本文ページ数は2000ページまでです。";
+    else if (p % 2 !== 0) pageErr = "本文ページ数は偶数で入力してください(紙1枚=2ページ)。";
+    if (pageErr) errors.push(pageErr);
+    st.pages = p;
+    var perfect = st.binding === "perfect";
+    if (perfect && st.printer.manual && !(st.thick >= 0.03 && st.thick <= 1)) errors.push("本文用紙の厚さを0.03〜1mmの範囲で入力してください。");
+    if (perfect && (st.printer.cover || EDITION === "full") && !(st.cover >= 0 && st.cover <= 2)) errors.push("表紙用紙の厚さを0〜2mmの範囲で入力してください(足さない場合は0)。");
+    var ts = trimSize(st);
+    if (!(ts.w >= 20 && ts.w <= 600 && ts.h >= 20 && ts.h <= 600)) errors.push("仕上がりサイズ(幅・高さ)を20〜600mmの範囲で入力してください。");
+    if (errors.length) return { errors: errors, pageErr: pageErr };
+
+    var warns = [];
+    if (!perfect) {
+      if ((p + 4) % 4 !== 0) warns.push("中綴じは表紙込みの総ページ数が4の倍数になる必要があります(今は表紙込み" + (p + 4) + "ページ)。");
+      if (st.printer.saddleMaxTotal && p + 4 > st.printer.saddleMaxTotal) warns.push(st.printer.name + "の中綴じは表紙込み" + st.printer.saddleMaxTotal + "ページまでです。");
+      else if (!st.printer.saddleMaxTotal && p + 4 > 64) warns.push("ページ数が多い本は中綴じに向かないことがあります。対応ページ数は印刷所に確認してください。");
+    }
+    var sp = calcSpine(st.printer, st.paper, st);
+    if (sp.warn) warns.push(sp.warn);
+    if (perfect && sp.value < 3) warns.push("背幅が3mm未満です。背表紙に文字を入れるのは避けるのが安全です(印刷所の目安は2〜3mm)。");
+    else if (perfect && sp.value < 5) warns.push("背幅が5mm未満です。背表紙の文字は小さめにし、ずれても困らない配置にしておくと安心です(本ツールからの助言)。");
+    if (ts.note) warns.push(ts.note);
+
+    var s = sp.value, b = st.bleed;
+    var ppm = st.dpi / 25.4;
+    // 各線の位置(左端からのmm)。px は位置ごとに丸め、内訳はその差分にする(合計と全体が必ず一致する)
+    var xs = [0, b, b + ts.w, b + ts.w + s, b + ts.w * 2 + s, b * 2 + ts.w * 2 + s];
+    var pxs = xs.map(function (x) { return Math.round(x * ppm + EPS); });
+    return {
+      st: st, spine: sp, trim: ts, warns: warns,
+      totalW: xs[5], totalH: ts.h + b * 2,
+      xs: xs, pxs: pxs,
+      pxW: pxs[5], pxH: Math.round((ts.h + b * 2) * ppm + EPS)
+    };
+  }
+
+  var last = null;
+  var pageErrTimer = null;
+
+  function sideLabels(st) {
+    return st.direction === "right" ? ["表紙(表1)", "裏表紙(表4)"] : ["裏表紙(表4)", "表紙(表1)"];
+  }
+
+  function render(opts) {
+    opts = opts || {};
+    syncFields();
+    var st = readState();
+    var res = compute(st);
+    last = res;
+    var el = $("result");
+    // ページ数のエラーは入力中にちらつかないよう、入力欄の下に少し遅れて出す
+    clearTimeout(pageErrTimer);
+    var pe = $("pagesErr");
+    if (res.pageErr) {
+      elPages.setAttribute("aria-invalid", "true");
+      pageErrTimer = setTimeout(function () { pe.textContent = res.pageErr; pe.classList.remove("hidden"); }, opts.immediate ? 0 : 700);
+    } else {
+      elPages.removeAttribute("aria-invalid");
+      pe.classList.add("hidden");
+    }
+    if (res.errors) {
+      el.innerHTML = '<p class="err"><strong>入力を確認してください</strong><br>' + res.errors.map(esc).join("<br>") + "</p>";
+      $("previewWrap").classList.add("hidden");
+      $("teaser").classList.add("hidden");
+      $("liveSummary").textContent = "";
+      
+      saveAuto();
+      return;
+    }
+    $("previewWrap").classList.remove("hidden");
+    var sp = res.spine, t = res.trim, b = st.bleed, labels = sideLabels(st);
+    var perfect = st.binding === "perfect";
+    var coverLine = "表紙データ全体 " + fmtNum(res.totalW) + "×" + fmtNum(res.totalH) + "mm / " + res.pxW.toLocaleString() + "×" + res.pxH.toLocaleString() + "px(" + st.dpi + "dpi)";
+    var html = '<div class="result-main">';
+    if (!perfect) {
+      html += '<div class="big">背なし<small>(中綴じ)</small></div>';
+    } else {
+      html += '<div class="big">' + esc(fmtNum(sp.value)) + '<small> mm</small></div>' +
+        '<div class="sub">背幅(' + esc(st.printer.name) + "の計算方法)" + (sp.error ? "・誤差の目安 " + esc(sp.error) : "") + "</div>";
+    }
+    html += '<div class="cover">' + esc(coverLine) + "</div>";
+    html += '<div class="sub">本文' + st.pages + "P+表紙4P=総" + (st.pages + 4) + "ページ" + (perfect ? "・参考(端数処理前の計算値): " + esc(sp.raw.toFixed(3)) + "mm" : "") + "</div></div>";
+    res.warns.forEach(function (w) { html += '<p class="warn">' + esc(w) + "</p>"; });
+    html += '<div class="table-wrap"><table class="dims"><thead><tr><th>表紙データの内訳(左から)</th><th>mm</th><th>px</th><th>左端からの位置px</th></tr></thead><tbody>';
+    var parts = [["塗り足し", 0], [labels[0], 1]];
+    if (perfect) parts.push(["背", 2]);
+    parts.push([labels[1], 3], ["塗り足し", 4]);
+    parts.forEach(function (r) {
+      var i = r[1];
+      var mm = res.xs[i + 1] - res.xs[i], px = res.pxs[i + 1] - res.pxs[i];
+      html += "<tr><td>" + esc(r[0]) + "</td><td>" + esc(fmtMm(mm)) + "</td><td>" + px.toLocaleString() + "</td><td>" + res.pxs[i].toLocaleString() + "〜" + res.pxs[i + 1].toLocaleString() + "</td></tr>";
+    });
+    html += '<tr class="total"><td>全体の幅</td><td>' + esc(fmtMm(res.totalW)) + "</td><td>" + res.pxW.toLocaleString() + "</td><td></td></tr>";
+    html += '<tr class="total"><td>全体の高さ(仕上がり' + esc(fmtMm(t.h)) + "+塗り足し" + b + "mm×2)</td><td>" + esc(fmtMm(res.totalH)) + "</td><td>" + res.pxH.toLocaleString() + "</td><td></td></tr>";
+    html += "</tbody></table></div>";
+    html += '<p class="fine">計算方法: ' + esc(st.printer.method) + "。";
+    if (st.printer.url) html += ' <a href="' + esc(st.printer.url) + '" target="_blank" rel="noopener">' + esc(st.printer.name) + "の公式ページで確認する(新しいタブ)</a>";
+    html += "</p>";
+    st.printer.notes.forEach(function (n) { html += '<p class="fine">' + esc(n) + "</p>"; });
+    el.innerHTML = html;
+    $("liveSummary").textContent = (perfect ? "背幅" + fmtMm(sp.value) + "。" : "中綴じ、背なし。") + coverLine;
+    $("previewCanvas").setAttribute("aria-label", "表紙の割り付け図: 左から" + labels[0] + (perfect ? "、背" + fmtMm(sp.value) : "") + "、" + labels[1] + "。全体" + fmtNum(res.totalW) + "×" + fmtNum(res.totalH) + "mm");
+    drawPreview(res);
+    renderTeaser(res);
+    
+    saveAuto();
+  }
+
+  // ===== 割り付け図・ガイド画像の描画 =====
+  function drawLayout(ctx, res, ppm, mode, withLabels) {
+    var st = res.st, t = res.trim, s = st.binding === "perfect" ? res.spine.value : 0, b = st.bleed;
+    var W = res.totalW * ppm, H = res.totalH * ppm;
+    var lw = Math.max(1, ppm * 0.25);
+    ctx.save();
+    if (mode === "preview") {
+      ctx.fillStyle = "#f6cfcf"; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = "#ffffff"; ctx.fillRect(b * ppm, b * ppm, (t.w * 2 + s) * ppm, t.h * ppm);
+    } else {
+      ctx.fillStyle = "rgba(230, 60, 60, 0.18)"; ctx.fillRect(0, 0, W, H);
+      ctx.clearRect(b * ppm, b * ppm, (t.w * 2 + s) * ppm, t.h * ppm);
+    }
+    // 安全域(各面、仕上がりから5mm内側)
+    ctx.strokeStyle = "#c2408a"; ctx.lineWidth = lw; ctx.setLineDash([lw * 6, lw * 4]);
+    var safe = 5;
+    if (t.w > safe * 2 && t.h > safe * 2) {
+      ctx.strokeRect((b + safe) * ppm, (b + safe) * ppm, (t.w - safe * 2) * ppm, (t.h - safe * 2) * ppm);
+      ctx.strokeRect((b + t.w + s + safe) * ppm, (b + safe) * ppm, (t.w - safe * 2) * ppm, (t.h - safe * 2) * ppm);
+    }
+    ctx.setLineDash([]);
+    ctx.strokeStyle = "#2a6fdb"; ctx.lineWidth = lw * 1.4;
+    ctx.strokeRect(b * ppm, b * ppm, (t.w * 2 + s) * ppm, t.h * ppm);
+    ctx.strokeStyle = "#1d9a5b"; ctx.lineWidth = lw * 1.4;
+    if (s > 0) {
+      [b + t.w, b + t.w + s].forEach(function (x) { ctx.beginPath(); ctx.moveTo(x * ppm, 0); ctx.lineTo(x * ppm, H); ctx.stroke(); });
+    } else {
+      ctx.setLineDash([lw * 6, lw * 4]);
+      ctx.beginPath(); ctx.moveTo((b + t.w) * ppm, 0); ctx.lineTo((b + t.w) * ppm, H); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    if (withLabels) {
+      var labels = sideLabels(st);
+      var fs = Math.max(11, Math.min(t.w, t.h) * ppm * 0.07);
+      var font = '"Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif';
+      ctx.fillStyle = mode === "preview" ? "#555" : "rgba(40, 40, 60, 0.75)";
+      ctx.font = "bold " + fs + "px " + font;
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      var cy = (b + t.h / 2) * ppm;
+      ctx.fillText(labels[0], (b + t.w / 2) * ppm, cy);
+      ctx.fillText(labels[1], (b + t.w + s + t.w / 2) * ppm, cy);
+      var fs2 = fs * 0.6;
+      if (fs2 >= 10) {
+        ctx.font = fs2 + "px " + font;
+        var sizeText = "仕上がり " + fmtMm(t.w) + "×" + fmtMm(t.h);
+        ctx.fillText(sizeText, (b + t.w / 2) * ppm, cy + fs * 1.3);
+        ctx.fillText(sizeText, (b + t.w + s + t.w / 2) * ppm, cy + fs * 1.3);
+      }
+      var spineText = s > 0 ? "背 " + fmtMm(s) : "中綴じ(背なし)";
+      var sf = Math.max(10, fs2);
+      ctx.font = sf + "px " + font;
+      if (s * ppm >= sf * 1.3) {
+        ctx.save();
+        ctx.translate((b + t.w + s / 2) * ppm, cy);
+        ctx.rotate(Math.PI / 2);
+        ctx.fillText(spineText, 0, 0);
+        ctx.restore();
+      } else if (b * ppm >= sf * 1.1) {
+        // 背が細いときは天側の塗り足しに置く
+        ctx.fillText(spineText, (b + t.w + s / 2) * ppm, b * ppm / 2);
+      }
+    }
+    ctx.restore();
+  }
+
+  function drawPreview(res) {
+    var cv = $("previewCanvas");
+    var ctx = cv.getContext("2d");
+    var cssW = Math.max(240, (cv.parentNode.clientWidth || 760));
+    var maxH = 460;
+    var ppm = Math.min(cssW / res.totalW, maxH / res.totalH);
+    var w = res.totalW * ppm, h = res.totalH * ppm;
+    var dpr = Math.min(window.devicePixelRatio || 1, 3);
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+    cv.style.width = Math.round(w) + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    drawLayout(ctx, res, ppm, "preview", true);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+  }
+
+  // ===== 同じ種類の用紙で印刷所を並べる =====
+  function sameCatResults(res) {
+    var cat = res.st.paper && res.st.paper[2];
+    if (!cat || res.st.binding !== "perfect") return null;
+    var out = [];
+    PRINTERS.forEach(function (pr) {
+      if (pr.manual) return;
+      var pp = pr.papers.filter(function (x) { return x[2] === cat; })[0];
+      if (!pp) return;
+      var sp = calcSpine(pr, pp, res.st);
+      out.push({ printer: pr, paper: pp, spine: sp, totalW: res.trim.w * 2 + sp.value + res.st.bleed * 2 });
+    });
+    return { cat: cat, rows: out };
+  }
+
+  function renderTeaser(res) {
+    var tz = $("teaser");
+    if (EDITION === "full") { tz.classList.add("hidden"); return; }
+    var sc = sameCatResults(res);
+    if (!sc || sc.rows.length < 2) { tz.classList.add("hidden"); return; }
+    var vals = sc.rows.map(function (r) { return r.spine.value; });
+    var mn = Math.min.apply(null, vals), mx = Math.max.apply(null, vals);
+    tz.classList.remove("hidden");
+    tz.textContent = "同じ「" + CATS[sc.cat] + "」・本文" + res.st.pages + "Pでも、計算方法の違いで背幅は印刷所によって" + fmtMm(mn) + "〜" + fmtMm(mx) + "と変わります。印刷所を切り替えて確かめられます(" + sc.rows.length + "社の一覧比較は買い切り版で)。";
+  }
+
+  // ===== 結果のコピー =====
+  function resultText(res) {
+    var st = res.st, t = res.trim;
+    var lines = [];
+    lines.push("【背幅計算】" + st.printer.name + (st.paper ? " / " + st.paper[0] : " / 紙厚" + st.thick + "mm"));
+    lines.push("仕上がり " + fmtMm(t.w) + "×" + fmtMm(t.h) + " / 本文" + st.pages + "P(総" + (st.pages + 4) + "P) / " + (st.binding === "perfect" ? "無線綴じ" : "中綴じ") + " / " + (st.direction === "right" ? "右綴じ" : "左綴じ"));
+    lines.push(st.binding === "perfect" ? "背幅: " + fmtMm(res.spine.value) + (res.spine.error ? "(誤差の目安 " + res.spine.error + ")" : "") : "背幅: なし(中綴じ)");
+    lines.push("表紙全体(塗り足し" + st.bleed + "mm込み): " + fmtMm(res.totalW) + "×" + fmtMm(res.totalH));
+    lines.push(st.dpi + "dpi: " + res.pxW + "×" + res.pxH + "px");
+    lines.push("※目安です。入稿前に印刷所の公式ページで確認してください。");
+    return lines.join("\n");
+  }
+
+  var copyTimer = null;
+  $("copyBtn").addEventListener("click", function () {
+    var status = $("copyStatus");
+    function say(m) { status.textContent = m; clearTimeout(copyTimer); copyTimer = setTimeout(function () { status.textContent = ""; }, 4000); }
+    if (!last || last.errors) { say("先に入力内容を確認してください。"); return; }
+    var text = resultText(last);
+    function done() { say("コピーしました。"); track("result_copy", { printer: last.st.printer.key }); }
+    function fallback() {
+      var ta = document.createElement("textarea");
+      ta.value = text; ta.setAttribute("readonly", ""); ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); done(); } catch (e) { say("コピーできませんでした。"); }
+      document.body.removeChild(ta);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, fallback);
+    else fallback();
+  });
+
+  // ===== 自動保存 =====
+  var AUTO_KEY = "sehaba_calc_auto_v1";
+  function snapshot() {
+    var pr = getPrinter(elPrinter.value);
+    var pp = pr.papers[parseInt(elPaper.value, 10)];
+    return { printer: pr.key, paperName: pp ? pp[0] : "", paperCat: pp ? (pp[2] || "") : "", binding: radioVal("binding"), direction: radioVal("direction"),
+      size: elSize.value, pages: elPages.value, thick: elThick.value, cover: elCover.value, bleed: elBleed.value, dpi: elDpi.value, w: elW.value, h: elH.value };
+  }
+  function applySnapshot(d) {
+    if (!d || typeof d !== "object") return false;
+    var pr = getPrinter(d.printer);
+    elPrinter.value = pr.key;
+    fillPapers(pr, { name: typeof d.paperName === "string" ? d.paperName : "", cat: typeof d.paperCat === "string" ? d.paperCat : "" });
+    setRadio("binding", d.binding === "saddle" ? "saddle" : "perfect");
+    setRadio("direction", d.direction === "left" ? "left" : "right");
+    elSize.value = SIZES.some(function (s) { return s.key === d.size; }) ? d.size : "A5";
+    lastSizeMode = "";
+    [["pages", elPages], ["thick", elThick], ["cover", elCover], ["w", elW], ["h", elH]].forEach(function (p) {
+      var v = parseFloat(d[p[0]]); if (isFinite(v)) p[1].value = String(v);
+    });
+    elBleed.value = d.bleed === "5" ? "5" : "3";
+    elDpi.value = ["350", "600", "1200"].indexOf(d.dpi) >= 0 ? d.dpi : "350";
+    return true;
+  }
+  function saveAuto() { try { localStorage.setItem(AUTO_KEY, JSON.stringify(snapshot())); } catch (e) {} }
+  function restoreAuto() {
+    try {
+      var raw = localStorage.getItem(AUTO_KEY);
+      if (!raw) return;
+      applySnapshot(JSON.parse(raw));
+    } catch (e) {
+      try { localStorage.removeItem(AUTO_KEY); } catch (e2) {}
+    }
+  }
+
+  function resetInputs() {
+    elPrinter.value = "eikou"; curPaper = { name: "", cat: "" }; fillPapers(PRINTER_BY_KEY.eikou);
+    setRadio("binding", "perfect"); setRadio("direction", "right");
+    elSize.value = "A5"; lastSizeMode = ""; elPages.value = "32"; elThick.value = "0.1"; elCover.value = "0.25";
+    elBleed.value = "3"; elDpi.value = "350"; elW.value = "148"; elH.value = "210";
+    $("paperNotice").classList.add("hidden");
+  }
+  $("resetBtn").addEventListener("click", function () {
+    if (!confirm("入力内容をリセットしますか?")) return;
+    try { localStorage.removeItem(AUTO_KEY); } catch (e) {}
+    resetInputs();
+    render({ immediate: true });
+  });
+
+  
+
+  if (EDITION !== "full") {
+    $("privacyNote").innerHTML = '入力した数値はどこにも送信されません(入力内容はこのブラウザ内にだけ自動保存されます)。このページでは利用状況の把握のためにアクセス解析(Google Analytics)を使っています。<a href="https://policies.google.com/technologies/partner-sites?hl=ja" target="_blank" rel="noopener">Googleによるデータの使用について</a>';
+  }
+
+  // ===== イベント =====
+  elPrinter.addEventListener("change", function () {
+    var pr = getPrinter(elPrinter.value);
+    var changedTo = fillPapers(pr, curPaper);
+    var notice = $("paperNotice");
+    if (changedTo) { notice.textContent = pr.name + "には同じ種類の用紙がないため、本文用紙を「" + changedTo + "」にしました。用紙を確認してください。"; notice.classList.remove("hidden"); }
+    else notice.classList.add("hidden");
+    track("printer_select", { printer: pr.key });
+    render({ immediate: true });
+  });
+  elPaper.addEventListener("change", function () { rememberPaper(); $("paperNotice").classList.add("hidden"); render(); });
+  [elSize, elBleed, elDpi].forEach(function (el) { el.addEventListener("change", function () { render({ immediate: true }); }); });
+  [elPages, elThick, elCover, elW, elH].forEach(function (el) { el.addEventListener("input", function () { render(); }); });
+  elPages.addEventListener("blur", function () { render({ immediate: true }); });
+  document.querySelectorAll('input[name="binding"], input[name="direction"]').forEach(function (el) { el.addEventListener("change", function () { render({ immediate: true }); }); });
+  var resizeTimer = null;
+  window.addEventListener("resize", function () { clearTimeout(resizeTimer); resizeTimer = setTimeout(function () { if (last && !last.errors) drawPreview(last); }, 150); });
+
+  fillPapers(PRINTER_BY_KEY[elPrinter.value]);
+  restoreAuto();
+  render({ immediate: true });
+})();
+</script>
+</body>
+</html>
