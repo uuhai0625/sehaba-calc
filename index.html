@@ -25,14 +25,14 @@
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="同人誌の背幅を本文ページ数と用紙から計算。栄光・ねこのしっぽ・緑陽社など印刷所ごとの計算方法に対応し、塗り足し込みの表紙サイズをmmとpx(350/600dpi)で表示する無料ツール。">
+<meta name="description" content="同人誌の背幅を本文ページ数と用紙から計算。栄光・ねこのしっぽ・コミグラ・トム出版・緑陽社・サンライズ・POPLS・プリントオンの8社の計算方法に対応し、塗り足し込みの表紙サイズをmmとpx(350/600dpi)で表示する無料ツール。">
 <link rel="canonical" href="https://uuhai0625.github.io/sehaba-calc/">
 <meta property="og:type" content="website">
 <meta property="og:locale" content="ja_JP">
-<meta property="og:title" content="同人誌 背幅計算ツール(印刷所別の計算方法・表紙サイズのpx換算つき)">
-<meta property="og:description" content="同人誌の背幅を本文ページ数と用紙から計算。栄光・ねこのしっぽ・緑陽社など印刷所ごとの計算方法に対応し、塗り足し込みの表紙サイズをmmとpx(350/600dpi)で表示する無料ツール。">
+<meta property="og:title" content="同人誌 背幅計算ツール|栄光・ねこのしっぽ・緑陽社など印刷所8社の計算方法に対応(表紙サイズpx換算つき)">
+<meta property="og:description" content="同人誌の背幅を本文ページ数と用紙から計算。栄光・ねこのしっぽ・コミグラ・トム出版・緑陽社・サンライズ・POPLS・プリントオンの8社の計算方法に対応し、塗り足し込みの表紙サイズをmmとpx(350/600dpi)で表示する無料ツール。">
 <meta property="og:url" content="https://uuhai0625.github.io/sehaba-calc/">
-<title>同人誌 背幅計算ツール(印刷所別の計算方法・表紙サイズのpx換算つき)</title>
+<title>同人誌 背幅計算ツール|栄光・ねこのしっぽ・緑陽社など印刷所8社の計算方法に対応(表紙サイズpx換算つき)</title>
 <style>
   :root {
     --bg: #f5f3ee;
@@ -304,6 +304,22 @@
       <p style="font-size:.8rem;">HTMLファイル1つで届きます。パソコンのブラウザで開いて使うのがおすすめです(オフラインで動きます)。</p>
       <a class="buy-btn" href="https://uuhai0625.booth.pm/items/8930364" id="buyLink" target="_blank" rel="noopener">買い切り版を見る(BOOTH・新しいタブ)</a>
     </div>
+  </section>
+
+  <section class="card" id="printers">
+    <h2>印刷所ごとの背幅の計算方法(対応8社)</h2>
+    <p class="hint">背幅は印刷所ごとに、表紙の厚みを足すか・端数の丸め方が違います。このツールは各社の公式の計算方法に合わせて計算します(2026年10月時点。最終確認は各社の公式ページで)。</p>
+    <ul class="printer-list">
+      <li><strong>栄光 背幅計算</strong>: 表紙の厚み×2 + 本文ページ数÷2×本文の紙厚。背幅3mm未満なら背表紙を作らないことを推奨(<a href="https://www.eikou.com/making/printglossary/backwidth/" target="_blank" rel="noopener">公式の説明</a>)</li>
+      <li><strong>ねこのしっぽ 背幅計算</strong>: 本文ページ数÷2×本文の紙厚 + 表紙の厚み×2(0.1mm単位で切り上げ)。総ページ数20P以上が対象、背幅45mm超は製本不可(<a href="https://www.shippo.co.jp/neko/calc_thick.shtml" target="_blank" rel="noopener">公式の説明</a>)</li>
+      <li><strong>コミグラ(グラフィック) 背幅計算</strong>: 表紙の厚み×2 + 本文の紙厚×本文ページ数÷2(0.5mm単位に切り上げ)(<a href="https://www.graphic.jp/comic/dojinshi/column/cover_tips" target="_blank" rel="noopener">公式の説明</a>)</li>
+      <li><strong>トム出版 背幅計算</strong>: 本文ページ数÷2×紙厚 + 0.4mm(表紙の厚み分)(<a href="https://www.tomshuppan.co.jp/manual/sehaba.html" target="_blank" rel="noopener">公式の説明</a>)</li>
+      <li><strong>緑陽社 背幅計算</strong>: 0.05×本文ページ数×用紙係数 + 補正値0.4mm。計算値は理論値で、背は多少ずれても問題ないデザインを推奨(<a href="https://www.ryokuyou.co.jp/doujin/sehaba" target="_blank" rel="noopener">公式の説明</a>)</li>
+      <li><strong>サンライズ 背幅計算</strong>: 本文ページ数×0.05×用紙係数(一部の用紙は+0.5mm)。計算値は理論値(<a href="https://www.sunrisep.co.jp/useful/auto-sehabakeisan/" target="_blank" rel="noopener">公式の説明</a>)</li>
+      <li><strong>POPLS 背幅計算</strong>: 表紙込みの総ページ数÷用紙ごとの定数。背幅3mm以内なら指定がなければ表紙(表1)側から背を取る(<a href="https://www2.popls.co.jp/pop/genkou/hyoushi.html" target="_blank" rel="noopener">公式の説明</a>)</li>
+      <li><strong>プリントオン 背幅計算</strong>: 公式の自動計算と同じく、2.176mm未満は一律2mm、それ以上は整数mmに丸め。背幅2〜3mm程度なら背に文字・絵柄を入れないことを推奨(<a href="https://www.print-on.jp/doujin/company/order/manual/sehaba/sehaba.htm" target="_blank" rel="noopener">公式の説明</a>)</li>
+    </ul>
+    <p class="hint">一覧にない印刷所は「その他の印刷所」で、本文と表紙の紙厚を入力して計算できます。</p>
   </section>
 
   
